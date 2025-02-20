@@ -6,9 +6,7 @@ from geopy.distance import geodesic
 from playsound import playsound
 import threading  # Chỉ dùng cho phát âm thanh cảnh báo (có thể giữ nguyên)
 
-# ---------------------------
-# Cấu hình toàn cục
-# ---------------------------
+
 HOST = '100.116.69.56'  # Địa chỉ IP của điện thoại
 # HOST = "iphone-15-pro-max.tail095752.ts.net"
 PORT = 11123             # Cổng đã cấu hình trên ứng dụng GPS
