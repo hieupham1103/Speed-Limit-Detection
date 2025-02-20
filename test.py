@@ -1,68 +1,43 @@
+from oauthlib.oauth2 import BackendApplicationClient
+from requests_oauthlib import OAuth2Session
+import requests
+
 import os
-import shutil
+from dotenv import load_dotenv
 
-# Mapping: key là id ban đầu, value là id mới
-mapping = {7: 0, 11: 1, 5: 2}
-selected_ids = set(mapping.keys())
+load_dotenv()
 
-# Các split cần xử lý
-splits = ['./datasets_goc/train', './datasets_goc/valid', './datasets_goc/test']
-# Thư mục dataset mới sẽ được copy ra
-output_dir = 'filtered_dataset'
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+THING_ID = os.getenv("THING_ID")
+PROPERTY_ID = os.getenv("PROPERTY_ID")
 
-for split in splits:
-    # Đường dẫn folder images và labels trong dataset gốc
-    src_images_dir = os.path.join(split, 'images')
-    src_labels_dir = os.path.join(split, 'labels')
-    
-    # Đường dẫn folder images và labels trong dataset mới
-    dst_images_dir = os.path.join(output_dir, split, 'images')
-    dst_labels_dir = os.path.join(output_dir, split, 'labels')
-    
-    # Tạo các thư mục nếu chưa tồn tại
-    os.makedirs(dst_images_dir, exist_ok=True)
-    os.makedirs(dst_labels_dir, exist_ok=True)
-    
-    # Duyệt qua các file label trong folder labels
-    for label_file in os.listdir(src_labels_dir):
-        if not label_file.endswith('.txt'):
-            continue
-        
-        src_label_path = os.path.join(src_labels_dir, label_file)
-        with open(src_label_path, 'r') as f:
-            lines = f.readlines()
-        
-        new_lines = []
-        for line in lines:
-            parts = line.strip().split()
-            # Giả sử định dạng YOLO: class x_center y_center width height
-            if len(parts) < 5:
-                continue
-            try:
-                orig_id = int(parts[0])
-            except ValueError:
-                continue
-            
-            # Chỉ giữ lại các dòng có class là Speed Limit cần chọn
-            if orig_id in selected_ids:
-                new_id = mapping[orig_id]
-                # Ghi đè id ban đầu bằng id mới
-                new_line = " ".join([str(new_id)] + parts[1:]) + "\n"
-                new_lines.append(new_line)
-        
-        # Nếu file label có chứa ít nhất 1 dòng phù hợp thì copy file ảnh và label tương ứng
-        if new_lines:
-            # Ghi file label mới vào dataset mới
-            dst_label_path = os.path.join(dst_labels_dir, label_file)
-            with open(dst_label_path, 'w') as f:
-                f.writelines(new_lines)
-            
-            # Xác định tên file ảnh tương ứng (chỉ khác phần mở rộng)
-            image_file = label_file[:-4] + '.jpg'
-            src_image_path = os.path.join(src_images_dir, image_file)
-            dst_image_path = os.path.join(dst_images_dir, image_file)
-            
-            if os.path.exists(src_image_path):
-                shutil.copy2(src_image_path, dst_image_path)
-            else:
-                print(f"Warning: File ảnh {src_image_path} không tồn tại.")
+oauth_client = BackendApplicationClient(client_id=CLIENT_ID)
+token_url = "https://api2.arduino.cc/iot/v1/clients/token"
+
+oauth = OAuth2Session(client=oauth_client)
+token = oauth.fetch_token(
+    token_url=token_url,
+    client_id= CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    include_client_id=True,
+    audience="https://api2.arduino.cc/iot",
+)
+
+# store access token in access_token variable
+access_token = token.get("access_token")
+
+url = f"https://api2.arduino.cc/iot/v2/things/{THING_ID}/properties/{PROPERTY_ID}"
+
+headers = {
+    "Authorization": f"Bearer {access_token}",
+    "Content-Type": "application/json"
+}
+
+response = requests.get(url, headers=headers)
+if response.status_code == 200:
+    data = response.json()
+    # In ra giá trị của thuộc tính (ví dụ: gia tốc)
+    print("Property Data:", data)
+else:
+    print("Error:", response.status_code, response.text)

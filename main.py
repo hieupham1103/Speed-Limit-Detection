@@ -1,125 +1,82 @@
 import cv2
-import socket
 import time
 from ultralytics import YOLO
-from geopy.distance import geodesic
 from playsound import playsound
-import threading  # Chỉ dùng cho phát âm thanh cảnh báo (có thể giữ nguyên)
+import threading
 
+from oauthlib.oauth2 import BackendApplicationClient
+from requests_oauthlib import OAuth2Session
+import requests
+import time
 
-HOST = '100.116.69.56'  # Địa chỉ IP của điện thoại
-# HOST = "iphone-15-pro-max.tail095752.ts.net"
-PORT = 11123             # Cổng đã cấu hình trên ứng dụng GPS
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+THING_ID = os.getenv("THING_ID")
+PROPERTY_ID = os.getenv("PROPERTY_ID")
+
 LABELS  = [30, 70, 120]
 
 ALARM_COOLDOWN = 2  
 last_alarm_time = 0
 
+acceleration = 0.0    # m/s², giá trị nhận từ Arduino Cloud
+last_time = time.time()
+
 def play_alarm():
     playsound("alert.wav")
 
-def convert_to_decimal(degree_min, direction):
-    """
-    Chuyển đổi tọa độ từ định dạng độ-phút (dmm) sang độ thập phân.
-    Ví dụ: '1106.38561' với 'N' -> 11 + 6.38561/60
-    """
-    degree = int(float(degree_min) / 100)
-    minute = float(degree_min) - degree * 100
-    decimal = degree + minute / 60
-    if direction in ['S', 'W']:
-        decimal = -decimal
-    return decimal
-
-def init_gps():
-    """
-    Khởi tạo kết nối GPS qua socket ở chế độ non-blocking.
-    """
-    try:
-        gps_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        gps_sock.connect((HOST, PORT))
-        gps_sock.setblocking(False)  # Chế độ non-blocking
-        print("[GPS] Đã kết nối tới điện thoại.")
-        return gps_sock
-    except Exception as e:
-        print("[GPS] Lỗi khi kết nối:", e)
-        return None
-
-def process_gps_data(gps_sock, last_position, last_time, current_speed):
-    """
-    Kiểm tra dữ liệu GPS có sẵn từ socket và cập nhật current_speed,
-    last_position, last_time dựa trên dữ liệu mới.
-    """
-    try:
-        data = gps_sock.recv(1024).decode('utf-8').strip()
-    except BlockingIOError:
-        # Không có dữ liệu mới
-        data = ""
-    except Exception as e:
-        print("[GPS] Lỗi:", e)
-        return current_speed, last_position, last_time
-
-    if data and data.startswith('$GPRMC'):
-        parts = data.split(',')
-        if parts[2] == 'A':  # Dữ liệu hợp lệ
-            lat = parts[3]
-            lat_dir = parts[4]
-            lon = parts[5]
-            lon_dir = parts[6]
-
-            latitude = convert_to_decimal(lat, lat_dir)
-            longitude = convert_to_decimal(lon, lon_dir)
-            current_time = time.time()
-
-            if last_position is not None and last_time is not None:
-                current_position = (latitude, longitude)
-                distance = geodesic(last_position, current_position).meters
-                time_diff = current_time - last_time
-                if time_diff > 0:
-                    speed_m_s = distance / time_diff  # m/s
-                    speed_kmh = speed_m_s * 3.6       # km/h
-                    current_speed = speed_kmh
-
-            last_position = (latitude, longitude)
-            last_time = current_time
-
-    return current_speed, last_position, last_time
-
 def main():
     global last_alarm_time
+    global last_time
+    global acceleration
+    
+    oauth_client = BackendApplicationClient(client_id=CLIENT_ID)
+    token_url = "https://api2.arduino.cc/iot/v1/clients/token"
+
+    oauth = OAuth2Session(client=oauth_client)
+    token = oauth.fetch_token(
+        token_url=token_url,
+        client_id= CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        include_client_id=True,
+        audience="https://api2.arduino.cc/iot",
+    )
+
+    # store access token in access_token variable
+    access_token = token.get("access_token")
+
+    url = f"https://api2.arduino.cc/iot/v2/things/{THING_ID}/properties/{PROPERTY_ID}"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
 
     print("[Vision] Đang load mô hình YOLOv5n sử dụng ultralytics...")
     # Load mô hình đã fine-tuned (đảm bảo file '30-70-120.pt' có sẵn)
     model = YOLO("./30-70-120.pt")
     print("[Vision] Mô hình đã được load.")
 
-    # Khởi tạo kết nối GPS
-    gps_sock = init_gps()
-    last_position = None
-    last_time = None
-    current_speed = 0.0
 
-    # Mở camera (thay đổi chỉ số nếu cần)
     cap = cv2.VideoCapture(1)
     if not cap.isOpened():
         print("[Vision] Không thể mở camera.")
         return
 
     speed_limit = None
-
+    
     while True:
         ret, frame = cap.read()
         if not ret:
             print("[Vision] Không nhận được frame từ camera.")
             break
 
-        # Cập nhật dữ liệu GPS nếu có dữ liệu mới
-        if gps_sock:
-            current_speed, last_position, last_time = process_gps_data(
-                gps_sock, last_position, last_time, current_speed
-            )
-
-        # Sử dụng mô hình YOLO để nhận diện biển báo tốc độ
-        results = model(frame)
+        results = model(frame, verbose=False)
         temp_speed_limit, temp_score = None, 0
         for result in results:
             for box in result.boxes.data.tolist():
@@ -133,9 +90,26 @@ def main():
                         pass
         if temp_speed_limit is not None:
             speed_limit = temp_speed_limit
-
-        cspeed = current_speed  # Tốc độ hiện tại tính từ GPS
-
+        
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            # print("Property Data:", data["last_value"])
+            acceleration = max(0.0, data["last_value"] - 0.99)
+            data["last_value"]
+            current_time = time.time()
+            dt = current_time - last_time
+            # Tích phân: v = v_prev + a * dt (giả sử dữ liệu gia tốc ổn định giữa 2 lần đo)
+            current_speed = acceleration * dt * 3.6  # chuyển đổi từ m/s sang km/h (nhân 3.6)
+            last_time = current_time
+            print(f"Acceleration: {acceleration:.2f} m/s², Speed: {current_speed:.2f} km/h, Delta Time: {dt:.2f} s")
+        else:
+            print("Error:", response.status_code, response.text)
+        
+        
+        
+        cspeed = current_speed
+        
         cv2.putText(frame, f"Speed: {cspeed:.2f} km/h", (50, 50),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         
@@ -151,7 +125,6 @@ def main():
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             now = time.time()
             if now - last_alarm_time > ALARM_COOLDOWN:
-                # Phát âm thanh cảnh báo (sử dụng thread để không làm chậm vòng lặp)
                 threading.Thread(target=play_alarm, daemon=True).start()
                 last_alarm_time = now
 
@@ -161,8 +134,6 @@ def main():
 
     cap.release()
     cv2.destroyAllWindows()
-    if gps_sock:
-        gps_sock.close()
 
 if __name__ == "__main__":
     main()
