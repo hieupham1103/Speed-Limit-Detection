@@ -150,6 +150,7 @@ Hệ thống sử dụng các cảm biến gia tốc (**Accelerometer**) và t�
 Từ dữ liệu **Magnetometer**, hệ thống xác định hướng của thiết bị trong không gian bằng cách tính toán **góc Euler** (Roll, Pitch, Yaw).  
 
 Công thức tính Roll & Pitch từ gia tốc kế:  
+
 $$
 \text{Roll} = \arctan{\left(\frac{a_y}{a_z}\right)}
 $$
