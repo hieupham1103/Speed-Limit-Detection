@@ -169,16 +169,15 @@ Từ đó, ta có thể suy ra ma trận biến đổi **Từ không gian local 
 Gia tốc đo từ **Accelerometer** là gia tốc trong hệ tọa độ của cảm biến, cần được chuyển sang hệ tọa độ toàn cục (global) bằng cách sử dụng ma trận xoay dựa trên góc Euler đã tính được.
 
 $$
-\begin{bmatrix} a_x^{(global)} \\
-a_y^{(global)} \\
-a_z^{(global)}
+\begin{bmatrix} a_x^{(\text{global})} \\
+a_y^{(\text{global})} \\
+a_z^{(\text{global})}
 \end{bmatrix}
 = R \begin{bmatrix}
-a_x^{(local)} \\
-a_y^{(local)} \\
-a_z^{(local)}
+a_x^{(\text{local})} \\
+a_y^{(\text{local})} \\
+a_z^{(\text{local})}
 \end{bmatrix}
-
 $$
 
 Với $R$ là ma trận quay dựa trên góc Euler.
