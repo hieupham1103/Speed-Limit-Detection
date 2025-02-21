@@ -126,7 +126,6 @@ project/
 └──/Train
     ├── datasets        # Dataset để train
     └──/train.ipynb     # Chạy file notebook này để train lại mô hình
-    
 ```
 ---
 

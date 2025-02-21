@@ -38,6 +38,7 @@ ALARM_COOLDOWN = 2  # seconds
 last_alarm_time = 0
 current_speed = 0.0  # km/h (tích lũy từ sensor)
 acceleration = 0.0   # m/s², giá trị lấy từ Arduino Cloud (sau chuyển đổi)
+bias_speed = 0
 last_time = time.time()
 
 # Một lock để bảo vệ cập nhật các biến chung (nếu cần)
@@ -188,13 +189,12 @@ def sensor_thread_func(access_token):
             dt = current_time - last_time
             with sensor_lock:
                 # Tích phân gia tốc: cộng dồn (Euler integration)
-                current_speed = acc_val * dt * 3.6  # chuyển đổi từ m/s sang km/h
+                current_speed = bias_speed + acc_val * dt * 3.6  # chuyển đổi từ m/s sang km/h
                 acceleration = acc_val
                 last_time = current_time
             print(f"[Sensor] Acc: {acceleration:.2f} m/s², Speed: {current_speed:.2f} km/h, Δt: {dt:.2f} s")
         else:
             print("[Sensor] No acceleration data.")
-        time.sleep(0.1)  # Tần số cập nhật sensor ~10Hz
 
 
 def main():
