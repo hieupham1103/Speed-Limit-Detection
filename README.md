@@ -184,6 +184,7 @@ Với $R$ là ma trận quay dựa trên góc Euler.
 
 ### **2.3. Tính toán vận tốc từ gia tốc**
 - **Tích phân dữ liệu gia tốc** để ước lượng vận tốc của phương tiện theo thời gian:
+
 $$
 v_x(t) = a_x(t) \cdot \Delta t
 $$
