@@ -199,8 +199,8 @@ $$
 
 ---
 
-## 3. Nhận diện biển báo tốc độ từ video (YOLOv5n)
-Hệ thống sử dụng mô hình **YOLOv5n** (phiên bản nhẹ, nhanh) để phát hiện biển báo tốc độ từ camera.  
+## 3. Nhận diện biển báo tốc độ từ video (YOLO11n)
+Hệ thống sử dụng mô hình **YOLO11n** (phiên bản nhẹ, nhanh) để phát hiện biển báo tốc độ từ camera.  
 - Dữ liệu video được lấy từ **camera gắn trên phương tiện** hoặc video phát lại.  
 - Mô hình YOLO đã được **fine-tuned** trên tập dữ liệu chứa các biển báo tốc độ phổ biến (30 km/h, 50 km/h, 70 km/h, 120 km/h,...).  
 - Khi YOLO phát hiện biển báo tốc độ, hệ thống sẽ đọc số giới hạn tốc độ từ bounding box.
