@@ -6,6 +6,8 @@ Dự án này được thực hiện cho môn MultiDisciplinary của ngành CSE
 
 ---
 
+![preview_img](./assets/preview.png)
+
 ## Giới thiệu
 
 Dự án này có mục đích phát triển một ứng dụng cảnh báo vượt tốc độ bằng cách:
@@ -132,6 +134,8 @@ project/
 # Cơ chế hoạt động của Hệ thống Cảnh báo Vượt tốc độ
 
 Dự án sử dụng **Arduino IoT Cloud, OpenCV, YOLO (Deep Learning)** và các thuật toán xử lý tín hiệu để nhận diện biển báo tốc độ, tính toán vận tốc của phương tiện, và đưa ra cảnh báo nếu có vi phạm tốc độ. Hệ thống hoạt động theo các bước sau:
+
+![pipeline_img](./assets/pipeline.png)
 
 ---
 
