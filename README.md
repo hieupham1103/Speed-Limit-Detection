@@ -33,9 +33,8 @@ Hệ thống được triển khai đa luồng, trong đó:
 ---
 
 ## demo dự án
-<video width="640" height="440" controls>
-  <source src="./assets/demo.mp4" type="video/mp4"> 
-</video>
+[![](https://markdown-videos-api.jorgenkh.no/youtube/srjwEIAEaeA)](https://youtu.be/srjwEIAEaeA)
+
 
 ## Yêu cầu
 
