@@ -205,21 +205,42 @@ def sensor_thread_func(access_token):
         else:
             print("[Sensor] No acceleration data.")
 
+        
 def history_saver_thread_func(filename="./database.json", interval=5):
     """
-    Thread lưu lịch sử tốc độ vào file JSON theo khoảng thời gian định kỳ.
+    Thread lưu liên tục lịch sử tốc độ từ dictionary history_data vào file JSON theo khoảng thời gian định kỳ.
+    Thay vì ghi đè toàn bộ file, hàm này sẽ đọc file hiện có, nối thêm dữ liệu mới, và ghi lại file.
+    Sau khi ghi, buffer history_data được xóa.
     """
-    global speed_history
+    global history_data
     while True:
         with sensor_lock:
-            # Ghi toàn bộ danh sách speed_history vào file
+            # Đọc file JSON hiện có (nếu có)
+            try:
+                with open(filename, "r") as f:
+                    current_data = json.load(f)
+            except FileNotFoundError:
+                current_data = {}
+
+            # Với mỗi client id, nối các bản ghi mới từ buffer vào dữ liệu hiện có.
+            for client, records in speed_history.items():
+                if client in current_data:
+                    current_data[client].extend(records)
+                else:
+                    current_data[client] = records
+
+            # Ghi lại dữ liệu đã nối vào file JSON.
             try:
                 with open(filename, "w") as f:
-                    json.dump(speed_history, f, indent=4)
-                print(f"[History Saver] Saved {len(speed_history)} records to {filename}")
+                    json.dump(current_data, f, indent=4)
+                print(f"[History Saver] Appended {sum(len(r) for r in history_data.values())} records to {filename}")
             except Exception as e:
                 print("[History Saver] Error saving history:", e)
+
+            # Xóa buffer sau khi đã ghi
+            history_data = {}
         time.sleep(interval)
+
 
 def main():
     global last_alarm_time, current_speed, speed_history
