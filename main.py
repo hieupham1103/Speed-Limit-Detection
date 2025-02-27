@@ -7,6 +7,8 @@ import math
 import numpy as np
 from dotenv import load_dotenv
 
+import json
+
 from ultralytics import YOLO
 from playsound import playsound
 from oauthlib.oauth2 import BackendApplicationClient
@@ -40,6 +42,8 @@ current_speed = 0.0  # km/h (tích lũy từ sensor)
 acceleration = 0.0   # m/s², giá trị lấy từ Arduino Cloud (sau chuyển đổi)
 bias_speed = 0
 last_time = time.time()
+
+speed_history = {}
 
 # Một lock để bảo vệ cập nhật các biến chung (nếu cần)
 sensor_lock = threading.Lock()
@@ -181,7 +185,7 @@ def sensor_thread_func(access_token):
     """
     Thread cập nhật giá trị gia tốc và tính tốc độ bằng cách tích phân gia tốc theo thời gian.
     """
-    global last_time, current_speed, acceleration
+    global last_time, current_speed, acceleration, speed_history
     while True:
         acc_val = get_acceleration(access_token)
         if acc_val is not None:
@@ -192,14 +196,35 @@ def sensor_thread_func(access_token):
                 current_speed = bias_speed + acc_val * dt * 3.6  # chuyển đổi từ m/s sang km/h
                 acceleration = acc_val
                 last_time = current_time
+                speed_history[CLIENT_ID].append({
+                    "timestamp": current_time,
+                    "speed": current_speed,
+                    "acceleration": acceleration
+                })
             print(f"[Sensor] Acc: {acceleration:.2f} m/s², Speed: {current_speed:.2f} km/h, Δt: {dt:.2f} s")
         else:
             print("[Sensor] No acceleration data.")
 
+def history_saver_thread_func(filename="./database.json", interval=5):
+    """
+    Thread lưu lịch sử tốc độ vào file JSON theo khoảng thời gian định kỳ.
+    """
+    global speed_history
+    while True:
+        with sensor_lock:
+            # Ghi toàn bộ danh sách speed_history vào file
+            try:
+                with open(filename, "w") as f:
+                    json.dump(speed_history, f, indent=4)
+                print(f"[History Saver] Saved {len(speed_history)} records to {filename}")
+            except Exception as e:
+                print("[History Saver] Error saving history:", e)
+        time.sleep(interval)
 
 def main():
-    global last_alarm_time, current_speed
-
+    global last_alarm_time, current_speed, speed_history
+    speed_history[CLIENT_ID] = []
+    
     access_token = fetch_oauth_token()
     print("[Vision] Loading YOLOv5n model...")
     model = YOLO("./30-70-120.pt")
@@ -208,6 +233,10 @@ def main():
     # Khởi chạy thread sensor
     sensor_thread = threading.Thread(target=sensor_thread_func, args=(access_token,), daemon=True)
     sensor_thread.start()
+    
+    # Khởi chạy thread lưu lịch sử tốc dộ
+    history_thread = threading.Thread(target=history_saver_thread_func, daemon=True)
+    history_thread.start()
 
     # Chạy detection trong main thread
     cap = cv2.VideoCapture(1)

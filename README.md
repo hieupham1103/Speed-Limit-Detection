@@ -18,6 +18,7 @@ Dự án này có mục đích phát triển một ứng dụng cảnh báo vư�
 Hệ thống được triển khai đa luồng, trong đó:
 - **Sensor Thread:** Liên tục truy vấn dữ liệu từ Arduino Cloud và cập nhật giá trị gia tốc, tính toán vận tốc.
 - **Main Thread:** Xử lý video, nhận diện biển báo tốc độ và hiển thị kết quả qua OpenCV (cv2.imshow).
+- **Record History:** Lưu lại lịch sử tốc độ của người dùng theo `CLIENT_ID` để dễ tra cứu
 
 ---
 
@@ -29,6 +30,7 @@ Hệ thống được triển khai đa luồng, trong đó:
 - **Nhận diện biển báo tốc độ:** Dùng mô hình YOLO11n (fine-tuned) để phát hiện biển báo tốc độ và xác định giới hạn tốc độ.
 - **Cảnh báo âm thanh:** Phát cảnh báo khi xe vượt quá giới hạn tốc độ (với ngưỡng thời gian giữa các lần cảnh báo).
 - **Hiển thị trực quan:** In thông tin vận tốc, giới hạn tốc độ và cảnh báo lên video.
+- **Lịch sử tốc độ:** Lưu lại lịch sử tốc độ của người dùng theo `CLIENT_ID` để dễ tra cứu
 
 ---
 
@@ -50,6 +52,7 @@ Hệ thống được triển khai đa luồng, trong đó:
   - `oauthlib`
   - `requests_oauthlib`
   - `numpy`
+  - `streamlit`
 - **Arduino IoT Cloud:**  
   Tài khoản Arduino IoT Cloud với thiết bị (Thing) và các thuộc tính cảm biến được cấu hình (Cần mua gói từ Entry trở lên để có thể dùng được API).
 - **Camera:**  
@@ -105,6 +108,7 @@ project/
 ├── .env                   # File cấu hình biến môi trường
 ├── requirements.txt       # (Tùy chọn) Danh sách các thư viện cần thiết
 └── README.md              # Tài liệu hướng dẫn dự án (README này)
+└── database.json          # Lịch sử tốc độ và gia tốc
 ```
 
 ---
@@ -122,9 +126,16 @@ project/
 
    - **Sensor Thread:** Sẽ liên tục truy vấn dữ liệu từ Arduino Cloud, chuyển đổi vector gia tốc sang hệ thống global và tích phân để tính vận tốc.
    - **Main Thread:** Sẽ mở camera, nhận diện biển báo tốc độ qua YOLO và hiển thị thông tin vận tốc, giới hạn tốc độ cùng cảnh báo nếu vượt quá.
+   - **Record History:** Lưu lại lịch sử tốc độ của người dùng theo `CLIENT_ID` để dễ tra cứu
 
 3. **Đóng chương trình:**
    - Nhấn phím `q` trên cửa sổ video để thoát.
+
+4. **Mở website tra cứu tốc độ:**
+   ``` bash
+   streamlit run website.py
+   ```
+
 
 ---
 
@@ -247,6 +258,10 @@ Hệ thống được thiết kế theo mô hình **đa luồng (Multithreading)
 - Cảnh báo được đưa ra **ngay lập tức** khi có vi phạm tốc độ.
 
 ---
+
+## 6. Website hiển thị trực quan
+
+![website_preview](./assets/website_preview.png)
 
 ## Liên hệ
 
